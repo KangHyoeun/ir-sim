@@ -198,20 +198,19 @@ class RobotOtter(ObjectBase):
         Args:
             action: Velocity commands [u_ref, r_ref] or None for behavior-based control
         """
-        # Store action for velocity tracking plot
+        # Store action for velocity tracking plot (if explicitly provided)
         if action is not None and action.shape[0] >= 2:
             self.set_commanded_velocities(action[0, 0], action[1, 0])
-        else:
-            # If no action, use current velocity as reference (for behavior-based control)
-            u_ref = self.state[3, 0] if self.state.shape[0] >= 4 else 0.0
-            r_ref = self.state[5, 0] if self.state.shape[0] >= 6 else 0.0
-            self.set_commanded_velocities(u_ref, r_ref)
+        # Note: If action is None, the parent class ObjectBase.step() will:
+        # 1. Generate behavior_vel from behavior configuration
+        # 2. Call set_commanded_velocities() with the correct behavior_vel values
+        # So we don't need to set it here - doing so would incorrectly use actual state velocities
         
         # Update otter_dynamics with current state before kinematics
         if self.use_full_dynamics and self.otter_dynamics is not None:
             self._update_otter_from_state()
         
-        # Call parent step method (handles kinematics)
+        # Call parent step method (handles kinematics and behavior velocity generation)
         super().step(action)
         
         # Extract updated velocities from state

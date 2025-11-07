@@ -20,6 +20,7 @@ class EnvConfig:
             "keyboard": dict(),
             "robot": None,
             "obstacle": None,
+            "coordinate_system": "math",  # Default: math coordinate system
         }
 
         if world_file_path != None:
@@ -35,6 +36,21 @@ class EnvConfig:
                             f"There are invalid key: '{key}' in {world_name} file!"
                         )
                         raise KeyError
+                
+                # Set coordinate_system with default value if not specified
+                if "coordinate_system" not in com_list:
+                    self._kwargs_parse["coordinate_system"] = "math"
+                    self.logger.info(f"coordinate_system not specified, using default: 'math'")
+                else:
+                    coord_sys = com_list["coordinate_system"]
+                    if coord_sys not in ["math", "maritime", "ned"]:
+                        self.logger.warning(
+                            f"Invalid coordinate_system '{coord_sys}', using 'math'. "
+                            f"Valid options: 'math', 'maritime', 'ned'"
+                        )
+                        self._kwargs_parse["coordinate_system"] = "math"
+                    else:
+                        self.logger.info(f"Using coordinate_system: '{coord_sys}'")
 
         else:
             self.logger.warning(f"{world_name} YAML File not found!, using default world config.")

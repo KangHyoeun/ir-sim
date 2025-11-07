@@ -40,6 +40,7 @@ class EnvPlot:
         saved_figure=dict(),
         figure_pixels: list = [1000, 800],
         show_title: bool = True,
+        coordinate_system: str = "math",
         **kwargs,
     ) -> None:
         """
@@ -54,6 +55,7 @@ class EnvPlot:
         self.y_range = world.y_range
         self.show_title = show_title
         self.title = None
+        self.coordinate_system = coordinate_system
 
         # Configure figure saving options
         self.saved_figure_kwargs = {
@@ -110,8 +112,13 @@ class EnvPlot:
         self.ax.set_xlim(self.x_range)
         self.ax.set_ylim(self.y_range)
 
-        self.ax.set_xlabel("x [m]")
-        self.ax.set_ylabel("y [m]")
+        # Set axis labels based on coordinate system
+        if self.coordinate_system in ["maritime", "ned"]:
+            self.ax.set_xlabel("East [m]")
+            self.ax.set_ylabel("North [m]")
+        else:
+            self.ax.set_xlabel("x [m]")
+            self.ax.set_ylabel("y [m]")
 
         # self.draw_components("all", objects)
         self.init_objects_plot(objects, **kwargs)

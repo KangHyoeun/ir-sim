@@ -338,8 +338,8 @@ class Lidar2D:
             # For 3D plotting, calculate actual world coordinates since transforms don't work the same way
             if state is not None and len(state) > 0:
                 # Calculate lidar position based on object state and sensor offset
-                lidar_x = self.lidar_origin[0, 0]
-                lidar_y = self.lidar_origin[1, 0]
+                lidar_x = self.lidar_origin[0, 0]  
+                lidar_y = self.lidar_origin[1, 0]  
                 lidar_theta = self.lidar_origin[2, 0] if self.lidar_origin.shape[0] > 2 else 0
             else:
                 lidar_x, lidar_y, lidar_theta = 0, 0, 0
@@ -373,16 +373,22 @@ class Lidar2D:
             self.laser_LineCollection = LineCollection(
                 lines, linewidths=1, colors=self.color, alpha=self.alpha, zorder=2
             )
+            # Completely disable all clipping so laser beams can extend beyond axis limits
+            # self.laser_LineCollection.set_clip_on(False)
+            # self.laser_LineCollection.set_clip_box(None)
             ax.add_collection(self.laser_LineCollection)
 
             # Apply transform for 2D case - use provided state for positioning
             if state is not None and len(state) > 0:
 
-                lidar_x = self.lidar_origin[0, 0]
-                lidar_y = self.lidar_origin[1, 0]
+                lidar_x = self.lidar_origin[0, 0]  
+                lidar_y = self.lidar_origin[1, 0]  
                 lidar_theta = self.lidar_origin[2, 0] if self.lidar_origin.shape[0] > 2 else 0
 
                 # Create transform: rotate by lidar orientation, then translate to lidar position
+                # NOTE: Maritime coordinate swap for matplotlib:
+                #   - lidar_origin[0] = North → matplotlib Y-axis
+                #   - lidar_origin[1] = East  → matplotlib X-axis
                 trans = (
                     mtransforms.Affine2D().rotate(lidar_theta).translate(lidar_x, lidar_y)
                     + ax.transData
@@ -405,8 +411,8 @@ class Lidar2D:
 
         if isinstance(ax, Axes3D):
             # For 3D plotting, calculate actual world coordinates
-            lidar_x = self.lidar_origin[0, 0]
-            lidar_y = self.lidar_origin[1, 0]
+            lidar_x = self.lidar_origin[0, 0]  
+            lidar_y = self.lidar_origin[1, 0]  
             lidar_theta = self.lidar_origin[2, 0] if self.lidar_origin.shape[0] > 2 else 0
 
             # Create line segments in world coordinates for 3D
@@ -432,14 +438,21 @@ class Lidar2D:
 
         # Update line segments
         self.laser_LineCollection.set_segments(lines)
+        
+        # Ensure clipping stays disabled
+        # self.laser_LineCollection.set_clip_on(False)
+        # self.laser_LineCollection.set_clip_box(None)
 
         # Apply transform to position the LineCollection based on current lidar origin (2D only)
         if not isinstance(ax, Axes3D):  # 2D case
-            lidar_x = self.lidar_origin[0, 0]
-            lidar_y = self.lidar_origin[1, 0]
+            lidar_x = self.lidar_origin[0, 0]  
+            lidar_y = self.lidar_origin[1, 0]  
             lidar_theta = self.lidar_origin[2, 0] if self.lidar_origin.shape[0] > 2 else 0
 
             # Create transform: rotate by lidar orientation, then translate to lidar position
+            # NOTE: Maritime coordinate swap for matplotlib:
+            #   - lidar_origin[0] = North → matplotlib Y-axis
+            #   - lidar_origin[1] = East  → matplotlib X-axis
             trans = (
                 mtransforms.Affine2D().rotate(lidar_theta).translate(lidar_x, lidar_y)
                 + ax.transData
@@ -931,4 +944,3 @@ class Lidar2D:
             lidar_orientation=lidar_orientation,
             range_max=self.range_max
         )
-    

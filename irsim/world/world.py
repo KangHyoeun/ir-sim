@@ -43,6 +43,7 @@ class World:
         plot: dict = dict(),
         status: str = "None",
         size: Optional[list] = None,
+        coordinate_system: str = "math",
         **kwargs,
     ) -> None:
         """
@@ -62,6 +63,7 @@ class World:
             plot: Plot configuration
             status: World status
             size: World size as [width, height] (overrides width and height if provided)
+            coordinate_system: Coordinate system type ('math' or 'maritime'/'ned')
             **kwargs: Additional arguments
         """
         # Handle size parameter - if provided, override width and height
@@ -75,12 +77,26 @@ class World:
         self.step_time = step_time
         self.sample_time = sample_time
         self.offset = offset
+        self.coordinate_system = coordinate_system
 
         self.count = 0
         self.sampling = True
 
-        self.x_range = [self.offset[0], self.offset[0] + self.width]
-        self.y_range = [self.offset[1], self.offset[1] + self.height]
+        # Calculate x_range and y_range based on coordinate system
+        if coordinate_system in ["maritime", "ned"]:
+            # Maritime/NED coordinate system:
+            # offset[0] = North offset, offset[1] = East offset
+            # width = East-West extent (horizontal, maps to matplotlib X-axis)
+            # height = North-South extent (vertical, maps to matplotlib Y-axis)
+            # User expects: width controls horizontal (X), height controls vertical (Y)
+            # So: X-axis uses offset[0] (North) + width, Y-axis uses offset[1] (East) + height
+            self.x_range = [self.offset[0], self.offset[0] + self.width]   # X-axis (horizontal) using North offset
+            self.y_range = [self.offset[1], self.offset[1] + self.height]  # Y-axis (vertical) using East offset
+        else:
+            # Standard math coordinate system:
+            # offset[0] = X offset, offset[1] = Y offset
+            self.x_range = [self.offset[0], self.offset[0] + self.width]
+            self.y_range = [self.offset[1], self.offset[1] + self.height]
 
         self.grid_map, self.obstacle_index, self.obstacle_positions = self.gen_grid_map(
             obstacle_map, mdownsample

@@ -3,6 +3,7 @@ import numpy as np
 from irsim.util.util import (
     convert_list_length,
     convert_list_length_dict,
+    maritime_to_math_state,
 )
 
 from irsim.world import (
@@ -25,13 +26,15 @@ class ObjectFactory:
     Factory class for creating various objects in the simulation.
     """
 
-    def create_from_parse(self, parse, obj_type="robot"):
+    def create_from_parse(self, parse, obj_type="robot", coordinate_system="math"):
         """
         Create objects from a parsed configuration.
 
         Args:
             parse (list or dict): Parsed configuration data.
             obj_type (str): Type of object to create, 'robot' or 'obstacle'.
+            coordinate_system (str): Coordinate system of the YAML file.
+                                     'math', 'maritime', or 'ned'. Default: 'math'.
 
         Returns:
             list: List of created objects.
@@ -39,14 +42,33 @@ class ObjectFactory:
         object_list = list()
 
         if isinstance(parse, list):
-            object_list = [
-                obj
-                for group_index, sp in enumerate(parse)
-                for obj in self.create_object(obj_type, group=group_index, **sp)
-            ]
+            object_list = []
+            for group_index, sp in enumerate(parse):
+                # Extract coordinate_system from sp if present, otherwise use function parameter
+                if isinstance(sp, dict) and 'coordinate_system' in sp:
+                    obj_coord_sys = sp['coordinate_system']
+                    # Create a copy without coordinate_system to avoid conflict
+                    sp_copy = {k: v for k, v in sp.items() if k != 'coordinate_system'}
+                else:
+                    obj_coord_sys = coordinate_system
+                    sp_copy = sp if isinstance(sp, dict) else sp
+                
+                for obj in self.create_object(obj_type, group=group_index, 
+                                              coordinate_system=obj_coord_sys, **sp_copy):
+                    object_list.append(obj)
 
         elif isinstance(parse, dict):
-            object_list = [obj for obj in self.create_object(obj_type, **parse)]
+            # Extract coordinate_system from parse if present, otherwise use function parameter
+            if 'coordinate_system' in parse:
+                obj_coord_sys = parse['coordinate_system']
+                # Create a copy without coordinate_system to avoid conflict
+                parse_copy = {k: v for k, v in parse.items() if k != 'coordinate_system'}
+            else:
+                obj_coord_sys = coordinate_system
+                parse_copy = parse.copy()
+            
+            object_list = [obj for obj in self.create_object(obj_type, 
+                                                             coordinate_system=obj_coord_sys, **parse_copy)]
 
         return object_list
 
@@ -77,6 +99,7 @@ class ObjectFactory:
         distribution: dict = {"name": "manual"},
         state: list = [1, 1, 0],
         goal: list = None,
+        coordinate_system: str = "math",
         **kwargs,
     ):
         """
@@ -88,6 +111,7 @@ class ObjectFactory:
             distribution (dict): Distribution type for generating states.
             state (list): Initial state for objects.
             goal (list): Goal state for objects.
+            coordinate_system (str): Coordinate system ('math', 'maritime', or 'ned').
             **kwargs: Additional parameters for object creation.
 
         Returns:
@@ -102,6 +126,31 @@ class ObjectFactory:
             state_list, goal_list = self.generate_state_list3D(
                 number, distribution, state, goal
             )
+
+        # Convert coordinates if YAML uses maritime/NED coordinate system
+        if coordinate_system in ["maritime", "ned"]:
+            # Convert each state from maritime to math coordinates
+            state_list_converted = []
+            for s in state_list:
+                if isinstance(s, list):
+                    s_array = np.array(s).reshape(-1, 1)
+                    s_converted = maritime_to_math_state(s_array)
+                    state_list_converted.append(s_converted.flatten().tolist())
+                else:
+                    state_list_converted.append(s)
+            state_list = state_list_converted
+            
+            # Convert goal states as well
+            if goal_list is not None:
+                goal_list_converted = []
+                for g in goal_list:
+                    if g is not None and isinstance(g, list):
+                        g_array = np.array(g).reshape(-1, 1)
+                        g_converted = maritime_to_math_state(g_array)
+                        goal_list_converted.append(g_converted.flatten().tolist())
+                    else:
+                        goal_list_converted.append(g)
+                goal_list = goal_list_converted
 
         object_list = list()
 

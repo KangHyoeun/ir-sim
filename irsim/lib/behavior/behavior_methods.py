@@ -261,6 +261,7 @@ def beh_otter_dash(ego_object, external_objects, **kwargs):
     goal_threshold = ego_object.goal_threshold
     _, max_vel = ego_object.get_vel_range()
     angle_tolerance = kwargs.get("angle_tolerance", 0.1)
+    reference_velocity = kwargs.get("reference_velocity", 3.0)
 
     if goal is None:
         if world_param.count % 10 == 0:
@@ -268,10 +269,13 @@ def beh_otter_dash(ego_object, external_objects, **kwargs):
 
         return np.zeros((2, 1))
 
-    behavior_vel = DiffDash(state, goal, max_vel, goal_threshold, angle_tolerance)
+    if reference_velocity is None:
+        reference_velocity = max_vel
+    else:
+        reference_velocity = np.array([[reference_velocity], [10]])
+    behavior_vel = DiffDash(state, goal, reference_velocity, goal_threshold, angle_tolerance)
 
     return behavior_vel
-
 
 def OmniRVO(
     state_tuple,

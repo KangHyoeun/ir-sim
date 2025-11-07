@@ -611,4 +611,215 @@ def is_2d_list(data: list) -> bool:
     return False
 
 
+# ========================================
+# Coordinate System Conversion Functions (IMPROVED)
+# ========================================
 
+# maritime_to_math_heading removed - use ned_to_math_heading for rad->rad conversion
+
+
+def math_to_maritime_heading(math_rad):
+    """
+    Convert math coordinate heading (radians) to maritime/NED heading (degrees).
+    
+    Usage: Python internal (radians) → Output/Display (degrees)
+    
+    Args:
+        math_rad (float): Math heading in radians [-π, π]
+    
+    Returns:
+        float: Maritime heading in degrees [0, 360)
+    
+    Examples:
+        >>> math_to_maritime_heading(np.pi/2)   # North
+        0.0
+        >>> math_to_maritime_heading(0)         # East
+        90.0
+    """
+    maritime_rad = pi/2 - math_rad
+    maritime_rad = WrapToRegion(maritime_rad, [0, 2*pi])
+    return np.degrees(maritime_rad)
+
+
+def ned_to_math_heading(ned_rad):
+    """
+    Convert NED heading (radians) to math coordinate heading (radians).
+    
+    Usage: PVS (NED radians) → Python internal (math radians)
+    
+    NED and maritime use the same convention: 0=North, CW
+    
+    Args:
+        ned_rad (float): NED heading in radians
+    
+    Returns:
+        float: Math heading in radians [-π, π]
+    
+    Examples:
+        >>> ned_to_math_heading(0)           # North
+        1.5708 (π/2)
+        >>> ned_to_math_heading(np.pi/2)     # East
+        0.0
+    """
+    return WrapToPi(pi/2 - ned_rad)
+
+
+def math_to_ned_heading(math_rad):
+    """
+    Convert math coordinate heading (radians) to NED heading (radians).
+    
+    Usage: Python internal (math radians) → PVS (NED radians)
+    
+    Args:
+        math_rad (float): Math heading in radians [-π, π]
+    
+    Returns:
+        float: NED heading in radians [-π, π]
+    
+    Examples:
+        >>> math_to_ned_heading(np.pi/2)    # North
+        0.0
+        >>> math_to_ned_heading(0)          # East
+        1.5708 (π/2)
+    """
+    return WrapToPi(pi/2 - math_rad)
+
+
+# ========================================
+# Position/State Conversion Functions  
+# ========================================
+
+def maritime_to_math_position(x_north, y_east):
+    """
+    Convert maritime/NED position to math coordinate position.
+    
+    Maritime: x=North, y=East
+    Math: x=East, y=North
+    
+    Args:
+        x_north (float): North position (maritime x)
+        y_east (float): East position (maritime y)
+    
+    Returns:
+        tuple: (x_east, y_north) in math coordinates
+    """
+    return y_east, x_north
+
+
+def math_to_maritime_position(x_east, y_north):
+    """
+    Convert math coordinate position to maritime/NED position.
+    
+    Args:
+        x_east (float): East position (math x)
+        y_north (float): North position (math y)
+    
+    Returns:
+        tuple: (x_north, y_east) in maritime coordinates
+    """
+    return y_north, x_east
+
+
+def maritime_to_math_state(state_maritime):
+    """
+    Convert full state from maritime/NED to math coordinates.
+    
+    Usage: YAML state (rad) → Python internal state (rad)
+    
+    Args:
+        state_maritime (np.array): [x_north, y_east, heading_rad] or [x_north, y_east]
+                                   Shape: (3,1) or (2,1)
+    
+    Returns:
+        np.array: [x_east, y_north, heading_rad] or [x_east, y_north]
+    
+    Example:
+        >>> state = np.array([[100], [50], [0]])  # 100m N, 50m E, 0 rad (North)
+        >>> maritime_to_math_state(state)
+        array([[50], [100], [1.5708]])  # 50m E, 100m N, π/2 rad (North)
+    """
+    if state_maritime.shape[0] >= 2:
+        x_math, y_math = maritime_to_math_position(
+            state_maritime[0, 0], state_maritime[1, 0]
+        )
+        
+        if state_maritime.shape[0] >= 3:
+            heading_math = ned_to_math_heading(state_maritime[2, 0])
+            return np.array([[x_math], [y_math], [heading_math]])
+        else:
+            return np.array([[x_math], [y_math]])
+    
+    return state_maritime
+
+
+def math_to_maritime_state(state_math):
+    """
+    Convert full state from math to maritime/NED coordinates.
+    
+    Usage: Python internal state (rad) → YAML/Output state (rad)
+    
+    Args:
+        state_math (np.array): [x_east, y_north, heading_rad] or [x_east, y_north]
+    
+    Returns:
+        np.array: [x_north, y_east, heading_rad] or [x_north, y_east]
+    """
+    if state_math.shape[0] >= 2:
+        x_maritime, y_maritime = math_to_maritime_position(
+            state_math[0, 0], state_math[1, 0]
+        )
+        
+        if state_math.shape[0] >= 3:
+            heading_maritime = math_to_ned_heading(state_math[2, 0])
+            return np.array([[x_maritime], [y_maritime], [heading_maritime]])
+        else:
+            return np.array([[x_maritime], [y_maritime]])
+    
+    return state_math
+
+
+def maritime_relative_angle(dx_north, dy_east):
+    """
+    Calculate angle in maritime/NED coordinates.
+    
+    Usage: Python internal calculation (returns radians)
+    
+    Maritime: arctan2(dy_east, dx_north)
+    
+    Args:
+        dx_north (float): Change in North direction
+        dy_east (float): Change in East direction
+    
+    Returns:
+        float: Angle in radians [0, 2π)
+               0 = North, π/2 = East, π = South, 3π/2 = West
+    
+    Examples:
+        >>> maritime_relative_angle(100, 0)  # Moving North
+        0.0 rad
+        >>> maritime_relative_angle(0, 100)  # Moving East
+        1.5708 rad (π/2)
+    """
+    angle_rad = atan2(dy_east, dx_north)
+    angle_rad = WrapToRegion(angle_rad, [0, 2*pi])
+    return angle_rad
+
+
+def math_relative_angle(dx_east, dy_north):
+    """
+    Calculate angle in math coordinates.
+    
+    Usage: Python internal calculation (returns radians)
+    
+    Math: arctan2(dy_north, dx_east)
+    
+    Args:
+        dx_east (float): Change in East direction
+        dy_north (float): Change in North direction
+    
+    Returns:
+        float: Angle in radians [-π, π]
+               0 = East, π/2 = North, π = West, -π/2 = South
+    """
+    angle_rad = atan2(dy_north, dx_east)
+    return WrapToPi(angle_rad)

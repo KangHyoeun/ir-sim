@@ -95,13 +95,15 @@ class EnvBase:
         self.object_factory = ObjectFactory()
         # init objects (world, obstacle, robot)
 
-        self._world = World(world_name, **self.env_config.parse["world"])
-
+        # Get coordinate system from config (default: 'math')
+        coordinate_system = self.env_config.parse.get("coordinate_system", "math")
+        self._world = World(world_name, coordinate_system=coordinate_system, **self.env_config.parse["world"])  
+        
         self._robot_collection = self.object_factory.create_from_parse(
-            self.env_config.parse["robot"], "robot"
+            self.env_config.parse["robot"], "robot", coordinate_system=coordinate_system
         )
         self._obstacle_collection = self.object_factory.create_from_parse(
-            self.env_config.parse["obstacle"], "obstacle"
+            self.env_config.parse["obstacle"], "obstacle", coordinate_system=coordinate_system
         )
         self._map_collection = self.object_factory.create_from_map(
             self._world.obstacle_positions, self._world.buffer_reso
@@ -118,6 +120,7 @@ class EnvBase:
         self._env_plot = EnvPlot(
             self._world,
             self.objects,
+            coordinate_system=coordinate_system,
             **self._world.plot_parse
         )
 
