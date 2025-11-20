@@ -1,0 +1,26 @@
+world:
+  height: 200
+  width: 200
+  step_time: 0.1
+  sample_time: 0.1
+  control: keyboard
+  offset:
+    - 0
+    - 0
+
+coordinate_system: maritime  # Maritime coordinate system (NED)
+
+robot:
+  - kinematics: {name: 'otter_usv'}  # Use Python Vehicle Simulator dynamics
+    shape: {name: 'rectangle', length: 2.0, width: 1.08}  # Otter USV dimensions
+    state: [0, 0, 0, 0, 0, 0, 0, 0]  # [x, y, heading, vx, vy, angular_vel, ...]
+    goal: [50, 0, 0]
+    vel_min: [-10.0, -10.0]
+    vel_max: [10.0, 10.0]
+    behavior: {name: 'dash'}
+    color: blue
+
+obstacle: []
+
+plot:
+  display_rate: 10

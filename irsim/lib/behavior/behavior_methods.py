@@ -322,12 +322,12 @@ def OmniRVO(
 def DiffRVO(
     state_tuple,
     neighbor_list=None,
-    vxmax=1.5,
-    vymax=1.5,
-    acce=1,
+    vxmax=10.0,
+    vymax=10.0,
+    acce=100.0,
     factor=1.0,
     mode="rvo",
-    neighbor_threshold=3.0,
+    neighbor_threshold=10.0,
 ):
     """
     Calculate the differential drive velocity using RVO.
