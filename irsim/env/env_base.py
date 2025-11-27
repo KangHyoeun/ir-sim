@@ -84,8 +84,8 @@ class EnvBase:
         # init env setting
         self.display = display
 
-        if not self.display:
-            matplotlib.use("Agg")
+        # if not self.display:
+        #     matplotlib.use("Agg")
 
         self.disable_all_plot = disable_all_plot
         self.save_ani = save_ani
@@ -117,12 +117,15 @@ class EnvBase:
         self.build_tree()
 
         # env parameters
-        self._env_plot = EnvPlot(
-            self._world,
-            self.objects,
-            coordinate_system=coordinate_system,
-            **self._world.plot_parse
-        )
+        if not self.disable_all_plot:
+            self._env_plot = EnvPlot(
+                self._world,
+                self.objects,
+                coordinate_system=coordinate_system,
+                **self._world.plot_parse
+            )
+        else:
+            self._env_plot = None
 
         env_param.objects = self.objects
 
@@ -136,7 +139,10 @@ class EnvBase:
             else:
                 self.keyboard = KeyboardControl(env_ref=self, **self.env_config.parse["keyboard"])
 
-        self.mouse = MouseControl(self._env_plot.ax)
+        if self._env_plot is not None:
+            self.mouse = MouseControl(self._env_plot.ax)
+        else:
+            self.mouse = None
 
         # flag
         self.pause_flag = False
@@ -249,7 +255,7 @@ class EnvBase:
         """
         Show the environment figure.
         """
-
+        if self.disable_all_plot: return
         self._env_plot.show()
 
     # draw various components
@@ -262,7 +268,7 @@ class EnvBase:
             traj_type: Type of the trajectory line, see matplotlib plot function for detail.
             **kwargs: Additional keyword arguments for drawing the trajectory, see :py:meth:`.EnvPlot.draw_trajectory` for detail.
         """
-
+        if self.disable_all_plot: return
         self._env_plot.draw_trajectory(traj, traj_type, **kwargs)
 
     def draw_points(
@@ -279,7 +285,7 @@ class EnvBase:
             refresh (bool): Flag to refresh the points in the figure.
             **kwargs: Additional keyword arguments for drawing the points, see `ax.scatter <https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.scatter.html>`_ function for detail.
         """
-
+        if self.disable_all_plot: return
         self._env_plot.draw_points(points, s, c, refresh, **kwargs)
 
     def draw_box(self, vertex: np.ndarray, refresh: bool = False, color: str = "-b"):
@@ -291,6 +297,7 @@ class EnvBase:
             refresh (bool): whether to refresh the plot, default True
             color (str): color of the box, default '-b'
         """
+        if self.disable_all_plot: return
         self._env_plot.draw_box(vertex, refresh, color)
 
     def draw_quiver(self, point, refresh=False, **kwargs):
@@ -302,6 +309,7 @@ class EnvBase:
             refresh (bool): Flag to refresh the quiver in the figure, default False
             **kwargs: Additional keyword arguments for drawing the quiver
         """
+        if self.disable_all_plot: return
         self._env_plot.draw_quiver(point, refresh, **kwargs)
 
     def draw_quivers(self, points, refresh=False, **kwargs):
@@ -313,6 +321,7 @@ class EnvBase:
             refresh (bool): Flag to refresh the quivers in the figure, default False
             **kwargs: Additional keyword arguments for drawing the quivers
         """
+        if self.disable_all_plot: return
         self._env_plot.draw_quivers(points, refresh, **kwargs)
 
     def end(self, ending_time: float = 3.0, **kwargs):
@@ -419,6 +428,7 @@ class EnvBase:
         """
         Reset the environment figure.
         """
+        if self.disable_all_plot: return
 
         self._env_plot.clear_components("all", self.objects)
         self._env_plot.init_plot(self._world.grid_map, self.objects)
@@ -471,8 +481,9 @@ class EnvBase:
                         existing_obj.append(obj)
                         break
 
-        self._env_plot.clear_components("all", self.obstacle_list)
-        self._env_plot.draw_components("all", self.obstacle_list)
+        if not self.disable_all_plot:
+            self._env_plot.clear_components("all", self.obstacle_list)
+            self._env_plot.draw_components("all", self.obstacle_list)
 
     def random_polygon_shape(
         self,
@@ -524,8 +535,9 @@ class EnvBase:
                 geom = Polygon(vertices_list[i])
                 obj.set_original_geometry(geom)
 
-        self._env_plot.clear_components("all", self.obstacle_list)
-        self._env_plot.draw_components("all", self.obstacle_list)
+        if not self.disable_all_plot:
+            self._env_plot.clear_components("all", self.obstacle_list)
+            self._env_plot.draw_components("all", self.obstacle_list)
 
     # endregion: environment change
 
@@ -697,7 +709,7 @@ class EnvBase:
         """
         Set the title of the plot.
         """
-
+        if self.disable_all_plot: return
         self._env_plot.title = title
 
     def save_figure(
@@ -716,6 +728,8 @@ class EnvBase:
             save_gif (bool): Flag to save as GIF format. Default is False.
             **kwargs: Additional keyword arguments for saving the figure, see `savefig <https://matplotlib.org/3.1.1/api/_as_gen/matplotlib.pyplot.savefig.html>`_ function for detail.
         """
+        if self.disable_all_plot: return
+
         file_save_name = save_name or self._world.name + ".png"
 
         file_name, file_format = file_save_name.split(".")
@@ -864,14 +878,17 @@ class EnvBase:
 
     @property
     def mouse_pos(self):
+        if self.mouse is None: return (0, 0)
         return self.mouse.mouse_pos
     
     @property
     def mouse_left_pos(self):
+        if self.mouse is None: return (0, 0)
         return self.mouse.left_click_pos
     
     @property
     def mouse_right_pos(self):
+        if self.mouse is None: return (0, 0)
         return self.mouse.right_click_pos
 
     # endregion: property

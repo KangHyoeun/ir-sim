@@ -46,13 +46,13 @@ class Behavior:
 
         if self.behavior_dict is None or not self.behavior_dict:
             
-            if world_param.control_mode == "auto":
-                if world_param.count == 1:
-                    self.logger.warning(
-                        "Behavior not defined for Object {}. This object will be static. Available behaviors: rvo, dash".format(
-                            self.object_info.id,
-                        )
-                    )
+            # if world_param.control_mode == "auto":
+            #     if world_param.count == 1:
+            #         self.logger.warning(
+            #             "Behavior not defined for Object {}. This object will be static. Available behaviors: rvo, dash".format(
+            #                 self.object_info.id,
+            #             )
+            #         )
                     
             return np.zeros((2, 1))
 

@@ -359,9 +359,23 @@ class Lidar2D:
                 lines.append(segment)
 
             self.laser_LineCollection = Line3DCollection(
-                lines, linewidths=1, colors=self.color, alpha=self.alpha, zorder=2
+                lines, linewidths=1, colors=self.color, alpha=0.1, zorder=2
             )
             ax.add_collection3d(self.laser_LineCollection)
+            
+            # Plot hit points (scatter)
+            hit_points = []
+            for i in range(self.number):
+                if self.range_data[i] < self.range_max - 0.1:
+                    x_local = self.range_data[i] * cos(self.angle_list[i])
+                    y_local = self.range_data[i] * sin(self.angle_list[i])
+                    x_world = lidar_x + x_local * cos(lidar_theta) - y_local * sin(lidar_theta)
+                    y_world = lidar_y + x_local * sin(lidar_theta) + y_local * cos(lidar_theta)
+                    hit_points.append([x_world, y_world, 0])
+            
+            if hit_points:
+                hit_points = np.array(hit_points)
+                ax.scatter(hit_points[:, 0], hit_points[:, 1], hit_points[:, 2], c='r', s=5, alpha=0.8, zorder=3)
         else:
             # For 2D plotting, create line segments in local coordinates and use transforms
             for i in range(self.number):
@@ -371,12 +385,36 @@ class Lidar2D:
                 lines.append(segment)
 
             self.laser_LineCollection = LineCollection(
-                lines, linewidths=1, colors=self.color, alpha=self.alpha, zorder=2
+                lines, linewidths=1, colors=self.color, alpha=0.1, zorder=2
             )
             # Completely disable all clipping so laser beams can extend beyond axis limits
             # self.laser_LineCollection.set_clip_on(False)
             # self.laser_LineCollection.set_clip_box(None)
             ax.add_collection(self.laser_LineCollection)
+
+            # Plot hit points (scatter)
+            hit_points = []
+            for i in range(self.number):
+                if self.range_data[i] < self.range_max - 0.1:
+                    x = self.range_data[i] * cos(self.angle_list[i])
+                    y = self.range_data[i] * sin(self.angle_list[i])
+                    hit_points.append([x, y])
+            
+            if hit_points:
+                hit_points = np.array(hit_points)
+                self.hit_points_collection = ax.scatter(hit_points[:, 0], hit_points[:, 1], c='r', s=5, alpha=0.8, zorder=3)
+                
+                # Apply transform to hit points
+                if state is not None and len(state) > 0:
+                     lidar_x = self.lidar_origin[0, 0]  
+                     lidar_y = self.lidar_origin[1, 0]  
+                     lidar_theta = self.lidar_origin[2, 0] if self.lidar_origin.shape[0] > 2 else 0
+                     
+                     trans = (
+                        mtransforms.Affine2D().rotate(lidar_theta).translate(lidar_x, lidar_y)
+                        + ax.transData
+                     )
+                     self.hit_points_collection.set_transform(trans)
 
             # Apply transform for 2D case - use provided state for positioning
             if state is not None and len(state) > 0:
@@ -439,6 +477,34 @@ class Lidar2D:
         # Update line segments
         self.laser_LineCollection.set_segments(lines)
         
+        # Update hit points
+        if not isinstance(ax, Axes3D):
+            hit_points = []
+            for i in range(self.number):
+                if self.range_data[i] < self.range_max - 0.1:
+                    x = self.range_data[i] * cos(self.angle_list[i])
+                    y = self.range_data[i] * sin(self.angle_list[i])
+                    hit_points.append([x, y])
+            
+            if hasattr(self, 'hit_points_collection'):
+                if hit_points:
+                    hit_points = np.array(hit_points)
+                    self.hit_points_collection.set_offsets(hit_points)
+                    
+                    # Apply transform
+                    lidar_x = self.lidar_origin[0, 0]  
+                    lidar_y = self.lidar_origin[1, 0]  
+                    lidar_theta = self.lidar_origin[2, 0] if self.lidar_origin.shape[0] > 2 else 0
+                    
+                    trans = (
+                        mtransforms.Affine2D().rotate(lidar_theta).translate(lidar_x, lidar_y)
+                        + ax.transData
+                    )
+                    self.hit_points_collection.set_transform(trans)
+                else:
+                    # Hide if no hit points
+                    self.hit_points_collection.set_offsets(np.empty((0, 2)))
+
         # Ensure clipping stays disabled
         # self.laser_LineCollection.set_clip_on(False)
         # self.laser_LineCollection.set_clip_box(None)

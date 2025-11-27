@@ -215,7 +215,7 @@ def beh_otter_rvo(ego_object, external_objects, **kwargs):
             - acce (float): Acceleration factor, default 100.0.
             - factor (float): Additional scaling factor, default 1.0.
             - mode (str): RVO calculation mode, default "rvo".
-            - neighbor_threshold (float): Neighbor threshold distance, default 10.0.
+            - neighbor_threshold (float): Neighbor threshold distance, default 100.0.
 
     Returns:
         np.array: Velocity [u_ref, r_ref] (2x1) for Otter USV.
@@ -228,12 +228,12 @@ def beh_otter_rvo(ego_object, external_objects, **kwargs):
 
     rvo_neighbor = [obj.rvo_neighbor_state for obj in external_objects]
     rvo_state = ego_object.rvo_state
-    vxmax = kwargs.get("vxmax", 10.0)
-    vymax = kwargs.get("vymax", 10.0)
+    vxmax = kwargs.get("vxmax", 3.0)
+    vymax = kwargs.get("vymax", 3.0)
     acce = kwargs.get("acce", 100.0)
     factor = kwargs.get("factor", 1.0)
     mode = kwargs.get("mode", "rvo")
-    neighbor_threshold = kwargs.get("neighbor_threshold", 10.0)
+    neighbor_threshold = kwargs.get("neighbor_threshold", 100.0)
     behavior_vel = DiffRVO(rvo_state, rvo_neighbor, vxmax, vymax, acce, factor, mode, neighbor_threshold)
 
     return behavior_vel
@@ -262,6 +262,7 @@ def beh_otter_dash(ego_object, external_objects, **kwargs):
     _, max_vel = ego_object.get_vel_range()
     angle_tolerance = kwargs.get("angle_tolerance", 0.1)
     reference_velocity = kwargs.get("reference_velocity", 3.0)
+    reference_yaw_rate = kwargs.get("reference_yaw_rate", 0.1745)
 
     if goal is None:
         if world_param.count % 10 == 0:
@@ -272,7 +273,7 @@ def beh_otter_dash(ego_object, external_objects, **kwargs):
     if reference_velocity is None:
         reference_velocity = max_vel
     else:
-        reference_velocity = np.array([[reference_velocity], [10]])
+        reference_velocity = np.array([[reference_velocity], [reference_yaw_rate]])
     behavior_vel = DiffDash(state, goal, reference_velocity, goal_threshold, angle_tolerance)
 
     return behavior_vel
@@ -322,8 +323,8 @@ def OmniRVO(
 def DiffRVO(
     state_tuple,
     neighbor_list=None,
-    vxmax=10.0,
-    vymax=10.0,
+    vxmax=3.0,
+    vymax=3.0,
     acce=100.0,
     factor=1.0,
     mode="rvo",

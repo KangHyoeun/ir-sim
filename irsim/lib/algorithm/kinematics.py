@@ -16,6 +16,14 @@ except ImportError:
     OTTER_AVAILABLE = False
     print("Warning: Python Vehicle Simulator not available. Otter USV dynamics will use simplified kinematics.")
 
+# Import Tanker from Python Vehicle Simulator
+try:
+    from python_vehicle_simulator.vehicles import tanker as TankerVehicle
+    TANKER_AVAILABLE = True
+except ImportError:
+    TANKER_AVAILABLE = False
+    print("Warning: Python Vehicle Simulator not available. Tanker dynamics will use simplified kinematics.")
+
 def differential_kinematics(
     state, velocity, step_time, noise=False, alpha=[0.03, 0, 0, 0.03]
 ):
@@ -310,3 +318,81 @@ def otter_usv_kinematics(state, velocity, step_time, otter_dynamics=None, noise=
     next_state[7, 0] = u_actual_next[1]  # n2
     
     return next_state 
+
+def tanker_kinematics(state, velocity, step_time, tanker_dynamics=None, noise=False, alpha=[0.03, 0, 0, 0.03]):
+    """
+    Calculate the next state for a Tanker using full 6-DOF dynamics.
+    
+    Args:
+        state: Extended state vector (8x1)
+        velocity: Desired velocity commands (not fully used if stepInput, but kept for compatibility)
+        step_time: Time step
+        tanker_dynamics: Dictionary containing Tanker dynamics object and states (REQUIRED)
+        noise: Boolean
+        alpha: Noise parameters
+    
+    Returns:
+        next_state: Updated state vector
+    """
+    
+    # Validate state dimensions
+    if state.shape[0] < 3:
+        raise ValueError(f"State must have at least 3 dimensions, got {state.shape[0]}")
+
+    if velocity.shape[0] < 2:
+        raise ValueError(f"Velocity must have 2 dimensions, got {velocity.shape[0]}")
+    
+    # Require tanker_dynamics for full dynamics simulation
+    if tanker_dynamics is None:
+        raise ValueError("tanker_dynamics is required for full Tanker dynamics.")
+    
+    if not TANKER_AVAILABLE:
+        raise ImportError("Python Vehicle Simulator not available.")
+    
+    # Full Tanker dynamics
+    tanker = tanker_dynamics['tanker']
+    eta = tanker_dynamics['eta']  # 6-DOF position/orientation
+    nu = tanker_dynamics['nu']    # 6-DOF velocities
+    u_actual = tanker_dynamics.get('u_actual', np.zeros(2))  # Rudder angle and rpm
+    
+    # Extract velocity commands
+    u_ref = velocity[0, 0]
+    r_ref = velocity[1, 0]
+    
+    # Apply noise if requested
+    if noise:
+        std_linear = np.sqrt(alpha[0] * (u_ref ** 2) + alpha[1] * (r_ref ** 2))
+        std_angular = np.sqrt(alpha[2] * (u_ref ** 2) + alpha[3] * (r_ref ** 2))
+        u_ref += np.random.normal(0, std_linear)
+        r_ref += np.random.normal(0, std_angular)
+
+    # Tanker velocity controller
+    u_control = tanker.velocityControl(nu, u_ref, r_ref, step_time)
+        
+    # Tanker dynamics
+    [nu_next, u_actual_next] = tanker.dynamics(eta, nu, u_actual, u_control, step_time)
+    
+    # Update position
+    eta_next = eta.copy()
+    eta_next[0] += step_time * (nu_next[0] * np.cos(eta[5]) - nu_next[1] * np.sin(eta[5]))
+    eta_next[1] += step_time * (nu_next[0] * np.sin(eta[5]) + nu_next[1] * np.cos(eta[5]))
+    eta_next[5] += step_time * nu_next[5]
+    eta_next[5] = WrapToPi(eta_next[5])
+    
+    # Update tanker_dynamics
+    tanker_dynamics['eta'] = eta_next
+    tanker_dynamics['nu'] = nu_next
+    tanker_dynamics['u_actual'] = u_actual_next
+    
+    # Pack into extended state for IR-SIM
+    next_state = np.zeros((8, 1))
+    next_state[0, 0] = eta_next[0]  # x
+    next_state[1, 0] = eta_next[1]  # y
+    next_state[2, 0] = eta_next[5]  # psi
+    next_state[3, 0] = nu_next[0]   # u
+    next_state[4, 0] = nu_next[1]   # v
+    next_state[5, 0] = nu_next[5]   # r
+    next_state[6, 0] = u_actual_next[0]  # delta
+    next_state[7, 0] = u_actual_next[1]  # rpm (stored in object)
+    
+    return next_state

@@ -954,6 +954,46 @@ class ObjectBase:
 
         self._plot(ax, state, vertices, **kwargs)
 
+    def plot_vectors(self, ax, state, **kwargs):
+        """
+        Plot heading and velocity vectors to visualize crabbing.
+        """
+        x, y, theta = state[0, 0], state[1, 0], state[2, 0]
+        
+        # Heading Vector (Red, Long) - Shows where the bow is pointing
+        arrow_len = 2.0
+        ax.arrow(x, y, arrow_len * np.cos(theta), arrow_len * np.sin(theta), 
+                 head_width=0.3, head_length=0.4, fc='r', ec='r', alpha=0.8, zorder=5, label='Heading')
+
+        # Velocity Vector (Blue, Short) - Shows actual movement direction (COG)
+        if hasattr(self, 'velocity_xy'):
+            vx, vy = self.velocity_xy[0, 0], self.velocity_xy[1, 0]
+            speed = np.hypot(vx, vy)
+            if speed > 0.1:
+                # Scale arrow length by speed, but keep it visible
+                vel_arrow_len = speed * 1.0 
+                ax.arrow(x, y, vx, vy, 
+                         head_width=0.2, head_length=0.3, fc='b', ec='b', alpha=0.8, zorder=5, label='Velocity')
+
+    def plot_ship_domain(self, ax, state, **kwargs):
+        """
+        Plot ship domain (safety zone) around the robot.
+        """
+        from matplotlib.patches import Ellipse
+        x, y, theta = state[0, 0], state[1, 0], state[2, 0]
+        
+        # Ship Domain Parameters (e.g., Jeon's Domain)
+        # Using a simplified ellipse for visualization
+        major_axis = 6.0 * 2 # Diameter (Radius * 2)
+        minor_axis = 3.0 * 2
+        
+        # Color based on risk (default green, can be updated externally)
+        domain_color = kwargs.get('domain_color', 'g')
+        
+        domain = Ellipse((x, y), width=major_axis, height=minor_axis, angle=np.degrees(theta),
+                         edgecolor=domain_color, facecolor='none', linestyle='--', linewidth=1.5, alpha=0.6, zorder=3)
+        ax.add_patch(domain)
+
     def _init_plot(self, ax, **kwargs):
         """Initialize plotting elements using zero state and initial vertices."""
         return self._plot(
@@ -998,6 +1038,8 @@ class ObjectBase:
                 - show_trail (bool): Whether to show object trails. Defaults to False.
                     - trail_freq (int): Frequency of trail display (every N steps). Defaults to 2.
                     - trail_edgecolor (str): Edge color of the trail. Defaults to object color.
+                - show_vectors (bool): Whether to show heading and velocity vectors. Defaults to False.
+                - show_domain (bool): Whether to show ship domain. Defaults to False.
                     - trail_linewidth (float): Width of the trail outline. Defaults to 0.8.
                     - trail_alpha (float): Transparency of the trail. Defaults to 0.7.
                     - trail_fill (bool): Whether to fill the trail shape. Defaults to False.

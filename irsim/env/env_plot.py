@@ -128,6 +128,42 @@ class EnvPlot:
             plt.axis("off")
         if tight:
             self.fig.tight_layout()
+            
+        # Initialize UI elements
+        if kwargs.get('show_info', True):
+            self.init_info_box()
+        if kwargs.get('show_action', True):
+            self.init_action_bar()
+
+    def init_info_box(self):
+        """Initialize text box for displaying simulation info."""
+        props = dict(boxstyle='round', facecolor='white', alpha=0.8)
+        self.info_text = self.ax.text(0.02, 0.98, "", transform=self.ax.transAxes,
+                                      fontsize=10, verticalalignment='top', bbox=props, zorder=10)
+
+    def update_info_box(self, info_str):
+        """Update info box text."""
+        if hasattr(self, 'info_text'):
+            self.info_text.set_text(info_str)
+
+    def init_action_bar(self):
+        """Initialize action bar chart."""
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+        # Create inset axes at bottom right
+        self.ax_action = inset_axes(self.ax, width="20%", height="15%", loc='lower right', borderpad=1)
+        self.ax_action.set_title("Action", fontsize=8)
+        self.ax_action.set_ylim(-1.5, 3.5) # Surge [0, 3], Yaw [-1, 1] approx
+        self.ax_action.set_xticks([0, 1])
+        self.ax_action.set_xticklabels(['Surge', 'Yaw'], fontsize=8)
+        self.ax_action.tick_params(axis='y', labelsize=8)
+        self.action_bars = self.ax_action.bar([0, 1], [0, 0], color=['blue', 'red'], alpha=0.7)
+
+    def update_action_bar(self, surge, yaw):
+        """Update action bar values."""
+        if hasattr(self, 'action_bars'):
+            self.action_bars[0].set_height(surge)
+            self.action_bars[1].set_height(yaw) # Yaw in rad/s or normalized? Usually small
+
 
     def step(self, mode="dynamic", objects=[], **kwargs):
 
