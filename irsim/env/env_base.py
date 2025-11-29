@@ -96,7 +96,12 @@ class EnvBase:
         # init objects (world, obstacle, robot)
 
         # Get coordinate system from config (default: 'math')
-        coordinate_system = self.env_config.parse.get("coordinate_system", "math")
+        # Check if coordinate_system is in env_config.parse["world"] and use it if present
+        if "coordinate_system" in self.env_config.parse["world"]:
+            coordinate_system = self.env_config.parse["world"].pop("coordinate_system")
+        else:
+            coordinate_system = self.env_config.parse.get("coordinate_system", "math")
+            
         self._world = World(world_name, coordinate_system=coordinate_system, **self.env_config.parse["world"])  
         
         self._robot_collection = self.object_factory.create_from_parse(

@@ -359,8 +359,9 @@ class Lidar2D:
                 lines.append(segment)
 
             self.laser_LineCollection = Line3DCollection(
-                lines, linewidths=1, colors=self.color, alpha=0.1, zorder=2
+                lines, linewidths=1, colors=self.color, alpha=0.05, zorder=2
             )
+            self.laser_LineCollection.set_alpha(0.05)
             ax.add_collection3d(self.laser_LineCollection)
             
             # Plot hit points (scatter)
@@ -375,7 +376,7 @@ class Lidar2D:
             
             if hit_points:
                 hit_points = np.array(hit_points)
-                ax.scatter(hit_points[:, 0], hit_points[:, 1], hit_points[:, 2], c='r', s=5, alpha=0.8, zorder=3)
+                ax.scatter(hit_points[:, 0], hit_points[:, 1], hit_points[:, 2], c='black', s=20, alpha=1.0, zorder=10)
         else:
             # For 2D plotting, create line segments in local coordinates and use transforms
             for i in range(self.number):
@@ -385,8 +386,9 @@ class Lidar2D:
                 lines.append(segment)
 
             self.laser_LineCollection = LineCollection(
-                lines, linewidths=1, colors=self.color, alpha=0.1, zorder=2
+                lines, linewidths=1, colors=self.color, alpha=0.05, zorder=2
             )
+            self.laser_LineCollection.set_alpha(0.05)
             # Completely disable all clipping so laser beams can extend beyond axis limits
             # self.laser_LineCollection.set_clip_on(False)
             # self.laser_LineCollection.set_clip_box(None)
@@ -402,7 +404,7 @@ class Lidar2D:
             
             if hit_points:
                 hit_points = np.array(hit_points)
-                self.hit_points_collection = ax.scatter(hit_points[:, 0], hit_points[:, 1], c='r', s=5, alpha=0.8, zorder=3)
+                self.hit_points_collection = ax.scatter(hit_points[:, 0], hit_points[:, 1], c='black', s=20, alpha=1.0, zorder=10)
                 
                 # Apply transform to hit points
                 if state is not None and len(state) > 0:
